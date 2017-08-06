@@ -3,16 +3,14 @@
 <Main>:
     Grid:
         id: grid
-        offset: 10
-        cell_width: 100
-        cell_height: 100
     Cursor:
+        main: root
         thickness: 2
         canvas:
             Color:
                 rgba: (1, 1, 0, 0.7)
             Line:
-                rectangle: (grid.offset, grid.offset + (grid.rows - 1) * grid.cell_height, grid.cell_width, grid.cell_height)
+                rectangle: (0, 0, grid.cell_width, grid.cell_height)
                 width: self.thickness
 
 
