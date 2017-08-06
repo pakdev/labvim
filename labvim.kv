@@ -4,13 +4,14 @@
     Grid:
         id: grid
     Cursor:
+        id: cursor
         main: root
         thickness: 2
         canvas:
             Color:
                 rgba: (1, 1, 0, 0.7)
             Line:
-                rectangle: (0, 0, grid.cell_width, grid.cell_height)
+                rectangle: (cursor.position_x * grid.cell_width, cursor.position_y * grid.cell_height, grid.cell_width, grid.cell_height)
                 width: self.thickness
 
 

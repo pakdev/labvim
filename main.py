@@ -17,10 +17,10 @@ from kivy.app import App
 class Main(ScatterLayout):
     Window.clearcolor = (.25, .25, .25, 1)
 
-    left = BooleanProperty(False)
-    right = BooleanProperty(False)
-    up = BooleanProperty(False)
-    down = BooleanProperty(False)
+    move_left = BooleanProperty(False)
+    move_right = BooleanProperty(False)
+    move_up = BooleanProperty(False)
+    move_down = BooleanProperty(False)
 
     def __init__(self, **kwargs):
         super(Main, self).__init__(**kwargs)
@@ -40,22 +40,17 @@ class Main(ScatterLayout):
         self._keyboard = None
 
     def _on_key_down(self, keyboard, keycode, text, modifiers):
-        handled = False
-
         if text == 'h':
-            self.left = True
-            handled = True
-        if text == 'j':
-            self.down = True
-            handled = True
-        if text == 'k':
-            self.up = True
-            handled = True
-        if text == 'l':
-            self.right = True
-            handled = True
+            self.move_left = True
+        elif text == 'j':
+            self.move_down = True
+        elif text == 'k':
+            self.move_up = True
+        elif text == 'l':
+            self.move_right = True
 
-        return handled
+        self.move_left, self.move_down, self.move_up, self.move_right = (False, False, False, False)
+        return text in ['h', 'j', 'k', 'l']
 
 
 class Grid(Widget):
@@ -96,34 +91,34 @@ class GridLine(Widget):
 
 class Cursor(Widget):
     main = ObjectProperty(None)
-    position = DictProperty({'x': 0, 'y': 0})
+    position_x = NumericProperty(0)
+    position_y = NumericProperty(0)
     thickness = BoundedNumericProperty(2, min=1, max=5)
 
     def __init__(self, **kwargs):
         super(Cursor, self).__init__(**kwargs)
 
     def on_main(self, sender, value):
-        value.bind(left=self.on_left)
-        value.bind(right=self.on_right)
-        value.bind(up=self.on_up)
-        value.bind(down=self.on_down)
+        value.bind(move_left=self.on_move_left)
+        value.bind(move_right=self.on_move_right)
+        value.bind(move_up=self.on_move_up)
+        value.bind(move_down=self.on_move_down)
 
-    def on_left(self, sender, value):
-        print('left')
-        if self.position.x > 0:
-            self.position.x -= 1
+    def on_move_left(self, sender, value):
+        if value:
+            self.position_x -= 1
 
-    def on_right(self, sender, event):
-        print('right')
-        self.position.x += 1
+    def on_move_right(self, sender, value):
+        if value:
+            self.position_x += 1
 
-    def on_up(self, sender, event):
-        print('up')
-        self.position.y += 1
+    def on_move_up(self, sender, value):
+        if value:
+            self.position_y += 1
 
-    def on_down(self, sender, event):
-        print('down')
-        self.position.y -= 1
+    def on_move_down(self, sender, value):
+        if value:
+            self.position_y -= 1
 
 
 class LabVIMApp(App):
