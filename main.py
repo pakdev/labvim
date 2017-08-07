@@ -6,51 +6,71 @@ from kivy.core.window import Window
 from kivy.uix.widget import Widget
 from kivy.properties import BoundedNumericProperty
 from kivy.properties import NumericProperty
-from kivy.properties import BooleanProperty
 from kivy.properties import ObjectProperty
+from kivy.properties import ListProperty
 from kivy.properties import DictProperty
 from kivy.graphics import Color
 from kivy.graphics import Line
 from kivy.app import App
 
 
-class Main(ScatterLayout):
-    Window.clearcolor = (.25, .25, .25, 1)
+class KeyboardHelper(object):
+    def __init__(self, current_key_mappings):
+        self._key_mappings = current_key_mappings
 
-    move_left = BooleanProperty(False)
-    move_right = BooleanProperty(False)
-    move_up = BooleanProperty(False)
-    move_down = BooleanProperty(False)
+    def update_key_mappings(self, current_key_mappings):
+        self._key_mappings = current_key_mappings
+
+    def is_action_triggered(self, action, pressed_keys):
+        for pressed_key in pressed_keys:
+            for key_mapping in self._key_mappings[action]:
+                if key_mapping in pressed_key:
+                    return True
+        return False
+
+
+class Main(ScatterLayout):
+    pressed_keys = ListProperty([])
+
+    # TODO: Allow custom keymaps in the future...
+    key_mappings = DictProperty(
+        {
+            'left': ['h'],
+            'right': ['l'],
+            'up': ['k'],
+            'down': ['j'],
+            'insert': ['i'],
+            'quit with saving': ['ZZ']
+        })
+
+    # Set the background to gray
+    Window.clearcolor = (.25, .25, .25, 1)
 
     def __init__(self, **kwargs):
         super(Main, self).__init__(**kwargs)
 
-        self._keyboard = Window.request_keyboard(
-            self._keyboard_closed, self, 'text')
-
+        self._keyboard = Window.request_keyboard(self._keyboard_closed, self, 'text')
         if self._keyboard.widget:
             pass
+
         self._keyboard.bind(on_key_down=self._on_key_down)
+        self._keyboard.bind(on_key_up=self._on_key_up)
 
     def cleanup(self):
         self._keyboard.release()
 
     def _keyboard_closed(self):
         self._keyboard.unbind(on_key_down=self._on_key_down)
+        self._keyboard.unbind(on_key_up=self._on_key_up)
         self._keyboard = None
 
     def _on_key_down(self, keyboard, keycode, text, modifiers):
-        if text == 'h':
-            self.move_left = True
-        elif text == 'j':
-            self.move_down = True
-        elif text == 'k':
-            self.move_up = True
-        elif text == 'l':
-            self.move_right = True
+        self.pressed_keys.append(keycode)
+        return True
 
-        self.move_left, self.move_down, self.move_up, self.move_right = (False, False, False, False)
-        return text in ['h', 'j', 'k', 'l']
+    def _on_key_up(self, keyboard, keycode):
+        self.pressed_keys.remove(keycode)
+        return True
 
 
 class Grid(Widget):
@@ -97,28 +117,25 @@ class Cursor(Widget):
 
     def __init__(self, **kwargs):
         super(Cursor, self).__init__(**kwargs)
+        self._keyboard_helper = None
 
     def on_main(self, sender, value):
-        value.bind(move_left=self.on_move_left)
-        value.bind(move_right=self.on_move_right)
-        value.bind(move_up=self.on_move_up)
-        value.bind(move_down=self.on_move_down)
+        value.bind(pressed_keys=self._on_pressed_keys)
+        value.bind(key_mappings=self._on_key_mappings)
+        self._keyboard_helper = KeyboardHelper(value.key_mappings)
 
-    def on_move_left(self, sender, value):
-        if value:
+    def _on_pressed_keys(self, sender, value):
+        if self._keyboard_helper.is_action_triggered('left', value):
             self.position_x -= 1
-
-    def on_move_right(self, sender, value):
-        if value:
+        if self._keyboard_helper.is_action_triggered('right', value):
             self.position_x += 1
-
-    def on_move_up(self, sender, value):
-        if value:
+        if self._keyboard_helper.is_action_triggered('up', value):
             self.position_y += 1
-
-    def on_move_down(self, sender, value):
-        if value:
+        if self._keyboard_helper.is_action_triggered('down', value):
             self.position_y -= 1
+
+    def _on_key_mappings(self, sender, value):
+        self._keyboard_helper.update_key_mappings(value)
 
 
 class LabVIMApp(App):
