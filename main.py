@@ -2,6 +2,7 @@ import math
 import atexit
 
 from kivy.uix.scatterlayout import ScatterLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 from kivy.uix.widget import Widget
 from kivy.properties import BoundedNumericProperty
@@ -73,7 +74,7 @@ class Main(ScatterLayout):
         return True
 
 
-class Grid(Widget):
+class Grid(FloatLayout):
     rows = NumericProperty(0)
     columns = NumericProperty(0)
 
@@ -107,6 +108,13 @@ class GridLine(Widget):
         with self.canvas:
             Color(0.5, 0.5, 0.5, 1)
             Line(points=[x1, y1, x2, y2])
+
+
+class Drawer(Widget):
+    main = ObjectProperty(None)
+
+    def __init__(self, **kwargs):
+        super(Drawer, self).__init__(**kwargs)
 
 
 class Cursor(Widget):
