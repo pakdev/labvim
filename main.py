@@ -7,6 +7,7 @@ from kivy.core.window import Window
 from kivy.uix.widget import Widget
 from kivy.properties import BoundedNumericProperty
 from kivy.properties import NumericProperty
+from kivy.properties import BooleanProperty
 from kivy.properties import ObjectProperty
 from kivy.properties import ListProperty
 from kivy.properties import DictProperty
@@ -30,11 +31,29 @@ class KeyboardHelper(object):
         return False
 
 
+class KeyboardMonitor(object):
+    def __init__(self, root, callback):
+        self._keymap = root.keymap
+        self._callback = callback
+
+        root.bind(pressed_keys=self._on_pressed_keys)
+        root.bind(keymap=self._update_keymap)
+
+    def _on_pressed_keys(self, sender, pressed_keys):
+        for pressed_key in pressed_keys:
+            for action, keys in self._keymap:
+                if pressed_key in keys:
+                    self._callback(action)
+
+    def _update_keymap(self, sender, new_keymap):
+        self._keymap = new_keymap
+
+
 class Main(ScatterLayout):
     pressed_keys = ListProperty([])
 
     # TODO: Allow custom keymaps in the future...
-    key_mappings = DictProperty(
+    keymap = DictProperty(
         {
             'left': ['h'],
             'right': ['l'],
@@ -112,9 +131,19 @@ class GridLine(Widget):
 
 class Drawer(Widget):
     main = ObjectProperty(None)
+    visible = BooleanProperty(False)
 
     def __init__(self, **kwargs):
         super(Drawer, self).__init__(**kwargs)
+
+    def on_main(self, sender, main):
+        KeyboardMonitor(main, self._on_action)
+
+    def _on_action(self, action):
+        if action == 'insert':
+            print('yes')
+        else:
+            print('no')
 
 
 class Cursor(Widget):
@@ -127,23 +156,23 @@ class Cursor(Widget):
         super(Cursor, self).__init__(**kwargs)
         self._keyboard_helper = None
 
-    def on_main(self, sender, value):
-        value.bind(pressed_keys=self._on_pressed_keys)
-        value.bind(key_mappings=self._on_key_mappings)
-        self._keyboard_helper = KeyboardHelper(value.key_mappings)
-
-    def _on_pressed_keys(self, sender, value):
-        if self._keyboard_helper.is_action_triggered('left', value):
-            self.position_x -= 1
-        if self._keyboard_helper.is_action_triggered('right', value):
-            self.position_x += 1
-        if self._keyboard_helper.is_action_triggered('up', value):
-            self.position_y += 1
-        if self._keyboard_helper.is_action_triggered('down', value):
-            self.position_y -= 1
-
-    def _on_key_mappings(self, sender, value):
-        self._keyboard_helper.update_key_mappings(value)
+    # def on_main(self, sender, value):
+    #     value.bind(pressed_keys=self._on_pressed_keys)
+    #     value.bind(key_mappings=self._on_key_mappings)
+    #     self._keyboard_helper = KeyboardHelper(value.key_mappings)
+    #
+    # def _on_pressed_keys(self, sender, value):
+    #     if self._keyboard_helper.is_action_triggered('left', value):
+    #         self.position_x -= 1
+    #     if self._keyboard_helper.is_action_triggered('right', value):
+    #         self.position_x += 1
+    #     if self._keyboard_helper.is_action_triggered('up', value):
+    #         self.position_y += 1
+    #     if self._keyboard_helper.is_action_triggered('down', value):
+    #         self.position_y -= 1
+    #
+    # def _on_key_mappings(self, sender, value):
+    #     self._keyboard_helper.update_key_mappings(value)
 
 
 class LabVIMApp(App):
