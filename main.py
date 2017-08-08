@@ -16,21 +16,6 @@ from kivy.graphics import Line
 from kivy.app import App
 
 
-class KeyboardHelper(object):
-    def __init__(self, current_key_mappings):
-        self._key_mappings = current_key_mappings
-
-    def update_key_mappings(self, current_key_mappings):
-        self._key_mappings = current_key_mappings
-
-    def is_action_triggered(self, action, pressed_keys):
-        for pressed_key in pressed_keys:
-            for key_mapping in self._key_mappings[action]:
-                if key_mapping in pressed_key:
-                    return True
-        return False
-
-
 class KeyboardMonitor(object):
     def __init__(self, root, callback):
         self._keymap = root.keymap
@@ -41,8 +26,8 @@ class KeyboardMonitor(object):
 
     def _on_pressed_keys(self, sender, pressed_keys):
         for pressed_key in pressed_keys:
-            for action, keys in self._keymap:
-                if pressed_key in keys:
+            for action, keys in self._keymap.items():
+                if pressed_key[1] in keys:
                     self._callback(action)
 
     def _update_keymap(self, sender, new_keymap):
@@ -135,15 +120,14 @@ class Drawer(Widget):
 
     def __init__(self, **kwargs):
         super(Drawer, self).__init__(**kwargs)
+        self._keyboard_monitor = None
 
     def on_main(self, sender, main):
-        KeyboardMonitor(main, self._on_action)
+        self._keyboard_monitor = KeyboardMonitor(main, self._on_action)
 
     def _on_action(self, action):
         if action == 'insert':
-            print('yes')
-        else:
-            print('no')
+            self.visible = True
 
 
 class Cursor(Widget):
@@ -154,25 +138,20 @@ class Cursor(Widget):
 
     def __init__(self, **kwargs):
         super(Cursor, self).__init__(**kwargs)
-        self._keyboard_helper = None
+        self._keyboard_monitor = None
 
-    # def on_main(self, sender, value):
-    #     value.bind(pressed_keys=self._on_pressed_keys)
-    #     value.bind(key_mappings=self._on_key_mappings)
-    #     self._keyboard_helper = KeyboardHelper(value.key_mappings)
-    #
-    # def _on_pressed_keys(self, sender, value):
-    #     if self._keyboard_helper.is_action_triggered('left', value):
-    #         self.position_x -= 1
-    #     if self._keyboard_helper.is_action_triggered('right', value):
-    #         self.position_x += 1
-    #     if self._keyboard_helper.is_action_triggered('up', value):
-    #         self.position_y += 1
-    #     if self._keyboard_helper.is_action_triggered('down', value):
-    #         self.position_y -= 1
-    #
-    # def _on_key_mappings(self, sender, value):
-    #     self._keyboard_helper.update_key_mappings(value)
+    def on_main(self, sender, main):
+        self._keyboard_monitor = KeyboardMonitor(main, self._on_action)
+
+    def _on_action(self, action):
+        if action == 'left':
+            self.position_x -= 1
+        if action == 'right':
+            self.position_x += 1
+        if action == 'up':
+            self.position_y += 1
+        if action == 'down':
+            self.position_y -= 1
 
 
 class LabVIMApp(App):
