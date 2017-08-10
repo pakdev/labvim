@@ -6,21 +6,32 @@
         Cursor:
             id: cursor
             main: root
+            width: grid.cell_width
+            height: grid.cell_height
+            position_y: grid.rows - 1
             thickness: 2
-            canvas:
-                Color:
-                    rgba: (1, 1, 0, 0.7)
-                Line:
-                    rectangle: (cursor.position_x * grid.cell_width, cursor.position_y * grid.cell_height, grid.cell_width, grid.cell_height)
-                    width: self.thickness
         Drawer:
-            visible: False
             main: root
+            rows: grid.rows
+            cols: grid.cols
+            row_default_height: grid.cell_height
+            col_default_width: grid.cell_width
+            size: (grid.size[0], grid.size[1] / 2)
+            pos: (0, grid.size[1] / -2)
+            visible: False
             canvas:
                 Color:
                     rgba: (1, 1, 1, 0.7)
                 Rectangle:
                     pos: grid.pos
-                    size: (grid.size[0], grid.size[1] / 2)
+                    size: (grid.size[0], self.visible * grid.size[1] / 2)
+            Cursor:
+                main: root
+                is_active: False
+                width: grid.cell_width
+                height: grid.cell_height
+                position_y: grid.rows / 2
+                thickness: 2
+
 
 

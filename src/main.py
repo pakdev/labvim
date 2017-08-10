@@ -2,9 +2,12 @@ import math
 import atexit
 
 from kivy.uix.scatterlayout import ScatterLayout
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.core.window import Window
 from kivy.uix.widget import Widget
+from kivy.uix.image import Image
 from kivy.properties import BoundedNumericProperty
 from kivy.properties import NumericProperty
 from kivy.properties import BooleanProperty
@@ -45,6 +48,7 @@ class Main(ScatterLayout):
             'up': ['k'],
             'down': ['j'],
             'insert': ['i'],
+            'select': ['enter'],
             'quit with saving': ['ZZ']
         })
 
@@ -80,7 +84,7 @@ class Main(ScatterLayout):
 
 class Grid(FloatLayout):
     rows = NumericProperty(0)
-    columns = NumericProperty(0)
+    cols = NumericProperty(0)
 
     cell_width = BoundedNumericProperty(100, min=100, max=500)
     cell_height = BoundedNumericProperty(100, min=100, max=500)
@@ -92,14 +96,14 @@ class Grid(FloatLayout):
         available_width = Window.width
 
         self.rows = math.floor(available_height / self.cell_height)
-        self.columns = math.floor(available_width / self.cell_width)
+        self.cols = math.floor(available_width / self.cell_width)
 
         for i in range(self.rows + 1):
             y = i * self.cell_height
-            grid_line = GridLine(0, y, self.columns * self.cell_width, y)
+            grid_line = GridLine(0, y, self.cols * self.cell_width, y)
             self.add_widget(grid_line)
 
-        for i in range(self.columns + 1):
+        for i in range(self.cols + 1):
             x = i * self.cell_width
             grid_line = GridLine(x, 0, x, self.rows * self.cell_height)
             self.add_widget(grid_line)
@@ -114,7 +118,44 @@ class GridLine(Widget):
             Line(points=[x1, y1, x2, y2])
 
 
-class Drawer(Widget):
+class Cursor(Widget):
+    main = ObjectProperty(None)
+    is_active = BooleanProperty(True)
+    width = NumericProperty(100)
+    height = NumericProperty(100)
+    position_x = NumericProperty(0)
+    position_y = NumericProperty(0)
+    thickness = BoundedNumericProperty(2, min=1, max=5)
+
+    def __init__(self, **kwargs):
+        super(Cursor, self).__init__(**kwargs)
+        self._keyboard_monitor = None
+
+        if self.is_active:
+            with self.canvas:
+                Color((1, 1, 0, 0.7))
+                Line(rectangle=(self.position_x * self.width,
+                                self.position_y * self.height,
+                                self.width,
+                                self.height),
+                     width=self.thickness)
+
+    def on_main(self, sender, main):
+        self._keyboard_monitor = KeyboardMonitor(main, self._on_action)
+
+    def _on_action(self, action):
+        if self.is_active:
+            if action == 'left':
+                self.position_x -= 1
+            if action == 'right':
+                self.position_x += 1
+            if action == 'up':
+                self.position_y += 1
+            if action == 'down':
+                self.position_y -= 1
+
+
+class Drawer(GridLayout):
     main = ObjectProperty(None)
     visible = BooleanProperty(False)
 
@@ -127,31 +168,22 @@ class Drawer(Widget):
 
     def _on_action(self, action):
         if action == 'insert':
+            # Add blocks to drop
+            self.add_widget(DrawerOption('../images/math.png'))
+            self.add_widget(DrawerOption('../images/science.png'))
+
             self.visible = True
+        elif action == 'select':
+            self.clear_widgets()
 
 
-class Cursor(Widget):
-    main = ObjectProperty(None)
-    position_x = NumericProperty(0)
-    position_y = NumericProperty(0)
-    thickness = BoundedNumericProperty(2, min=1, max=5)
+class DrawerOption(AnchorLayout):
+    def __init__(self, image_path, **kwargs):
+        super(DrawerOption, self).__init__(**kwargs)
+        self.anchor_x = 'center'
+        self.anchor_y = 'center'
 
-    def __init__(self, **kwargs):
-        super(Cursor, self).__init__(**kwargs)
-        self._keyboard_monitor = None
-
-    def on_main(self, sender, main):
-        self._keyboard_monitor = KeyboardMonitor(main, self._on_action)
-
-    def _on_action(self, action):
-        if action == 'left':
-            self.position_x -= 1
-        if action == 'right':
-            self.position_x += 1
-        if action == 'up':
-            self.position_y += 1
-        if action == 'down':
-            self.position_y -= 1
+        self.add_widget(Image(source=image_path))
 
 
 class LabVIMApp(App):
