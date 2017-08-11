@@ -1,5 +1,6 @@
 import math
 import atexit
+from enum import Enum
 
 from kivy.uix.scatterlayout import ScatterLayout
 from kivy.uix.anchorlayout import AnchorLayout
@@ -7,16 +8,23 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.core.window import Window
 from kivy.uix.widget import Widget
-from kivy.uix.image import Image
 from kivy.properties import BoundedNumericProperty
 from kivy.properties import NumericProperty
 from kivy.properties import BooleanProperty
 from kivy.properties import ObjectProperty
+from kivy.properties import StringProperty
 from kivy.properties import ListProperty
 from kivy.properties import DictProperty
 from kivy.graphics import Color
 from kivy.graphics import Line
 from kivy.app import App
+
+
+class State(Enum):
+    EDITING = 1
+    INSERTING = 2
+
+current_state = State.EDITING
 
 
 class KeyboardMonitor(object):
@@ -29,9 +37,11 @@ class KeyboardMonitor(object):
 
     def _on_pressed_keys(self, sender, pressed_keys):
         for pressed_key in pressed_keys:
-            for action, keys in self._keymap.items():
-                if pressed_key[1] in keys:
-                    self._callback(action)
+            for state, actions in self._keymap.items():
+                if state == current_state:
+                    for action, keys in actions.items():
+                        if pressed_key[1] in keys:
+                            self._callback(action)
 
     def _update_keymap(self, sender, new_keymap):
         self._keymap = new_keymap
@@ -39,24 +49,30 @@ class KeyboardMonitor(object):
 
 class Main(ScatterLayout):
     pressed_keys = ListProperty([])
-
-    # TODO: Allow custom keymaps in the future...
     keymap = DictProperty(
         {
-            'left': ['h'],
-            'right': ['l'],
-            'up': ['k'],
-            'down': ['j'],
-            'insert': ['i'],
-            'select': ['enter'],
-            'quit with saving': ['ZZ']
+            State.EDITING: {
+                'left': ['h'],
+                'right': ['l'],
+                'up': ['k'],
+                'down': ['j'],
+                'insert': ['i'],
+                'quit': ['ZZ']
+            },
+            State.INSERTING: {
+                'left': ['h'],
+                'right': ['l'],
+                'up': ['k'],
+                'down': ['j'],
+                'select': ['enter']
+            }
         })
 
     # Set the background to gray
-    Window.clearcolor = (.25, .25, .25, 1)
+    Window.clearcolor = (0.25, 0.25, 0.25, 1)
 
     def __init__(self, **kwargs):
-        super(Main, self).__init__(**kwargs)
+        super(Main, self).__init__()
 
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self, 'text')
         if self._keyboard.widget:
@@ -90,7 +106,7 @@ class Grid(FloatLayout):
     cell_height = BoundedNumericProperty(100, min=100, max=500)
 
     def __init__(self, **kwargs):
-        super(Grid, self).__init__(**kwargs)
+        super(Grid, self).__init__()
 
         available_height = Window.height
         available_width = Window.width
@@ -120,28 +136,33 @@ class GridLine(Widget):
 
 class Cursor(Widget):
     main = ObjectProperty(None)
+    color = ListProperty([1, 1, 0, 0.7])
     is_active = BooleanProperty(True)
-    width = NumericProperty(100)
-    height = NumericProperty(100)
+    is_visible = BooleanProperty(True)
+    cursor_width = NumericProperty(100)
+    cursor_height = NumericProperty(100)
     position_x = NumericProperty(0)
     position_y = NumericProperty(0)
     thickness = BoundedNumericProperty(2, min=1, max=5)
 
     def __init__(self, **kwargs):
-        super(Cursor, self).__init__(**kwargs)
+        super(Cursor, self).__init__()
         self._keyboard_monitor = None
 
         if self.is_active:
-            with self.canvas:
-                Color((1, 1, 0, 0.7))
-                Line(rectangle=(self.position_x * self.width,
-                                self.position_y * self.height,
-                                self.width,
-                                self.height),
-                     width=self.thickness)
+            self._draw()
 
     def on_main(self, sender, main):
         self._keyboard_monitor = KeyboardMonitor(main, self._on_action)
+
+    def on_is_visible(self, sender, value):
+        self._draw()
+
+    def on_position_x(self, sender, value):
+        self._draw()
+
+    def on_position_y(self, sender, value):
+        self._draw()
 
     def _on_action(self, action):
         if self.is_active:
@@ -154,36 +175,56 @@ class Cursor(Widget):
             if action == 'down':
                 self.position_y -= 1
 
+    def _draw(self):
+        if self.is_visible:
+            self.canvas.clear()
+            with self.canvas:
+                Color(*self.color)
+                Line(rectangle=(self.position_x * self.cursor_width,
+                                self.position_y * self.cursor_height,
+                                self.cursor_width,
+                                self.cursor_height),
+                     width=self.thickness)
+        else:
+            self.canvas.clear()
+
 
 class Drawer(GridLayout):
     main = ObjectProperty(None)
-    visible = BooleanProperty(False)
+    is_visible = BooleanProperty(False)
 
     def __init__(self, **kwargs):
-        super(Drawer, self).__init__(**kwargs)
+        super(Drawer, self).__init__()
         self._keyboard_monitor = None
 
     def on_main(self, sender, main):
         self._keyboard_monitor = KeyboardMonitor(main, self._on_action)
 
     def _on_action(self, action):
+        global current_state
         if action == 'insert':
-            # Add blocks to drop
-            self.add_widget(DrawerOption('../images/math.png'))
-            self.add_widget(DrawerOption('../images/science.png'))
+            current_state = State.INSERTING
 
-            self.visible = True
+            # Add blocks to drop
+            self.add_widget(DrawerOption(name='Math', source='../images/math.png'))
+            self.add_widget(DrawerOption(name='Science', source='../images/science.png'))
+
+            self.is_visible = True
         elif action == 'select':
+            current_state = State.EDITING
+
             self.clear_widgets()
+            self.is_visible = False
 
 
 class DrawerOption(AnchorLayout):
-    def __init__(self, image_path, **kwargs):
-        super(DrawerOption, self).__init__(**kwargs)
-        self.anchor_x = 'center'
-        self.anchor_y = 'center'
+    name = StringProperty('')
+    image_source = StringProperty('')
 
-        self.add_widget(Image(source=image_path))
+    def __init__(self, **kwargs):
+        super(DrawerOption, self).__init__()
+        self.name = kwargs.get('name', '')
+        self.image_source = kwargs.get('source', '')
 
 
 class LabVIMApp(App):

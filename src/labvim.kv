@@ -6,32 +6,47 @@
         Cursor:
             id: cursor
             main: root
-            width: grid.cell_width
-            height: grid.cell_height
+            is_active: not drawer.is_visible
+            cursor_width: grid.cell_width
+            cursor_height: grid.cell_height
             position_y: grid.rows - 1
             thickness: 2
         Drawer:
+            id: drawer
             main: root
             rows: grid.rows
             cols: grid.cols
             row_default_height: grid.cell_height
             col_default_width: grid.cell_width
             size: (grid.size[0], grid.size[1] / 2)
-            pos: (0, grid.size[1] / -2)
+            pos: (-grid.cell_width, grid.size[1] / -2)  # TODO: Why do I need to subtract cell_width here?
             visible: False
             canvas:
                 Color:
                     rgba: (1, 1, 1, 0.7)
                 Rectangle:
                     pos: grid.pos
-                    size: (grid.size[0], self.visible * grid.size[1] / 2)
+                    size: (grid.size[0], self.is_visible * grid.size[1] / 2)
             Cursor:
                 main: root
-                is_active: False
-                width: grid.cell_width
-                height: grid.cell_height
-                position_y: grid.rows / 2
+                color: (1, 0, 0, 0.7)
+                is_active: drawer.is_visible
+                is_visible: drawer.is_visible
+                cursor_width: grid.cell_width
+                cursor_height: grid.cell_height
+                position_y: grid.rows / 2 - 1
                 thickness: 2
+
+<DrawerOption>:
+    id: option
+    anchor_x: 'center'
+    anchor_y: 'center'
+    BoxLayout:
+        orientation: 'vertical'
+        Image:
+            source: option.image_source
+        Label:
+            text: option.name
 
 
 
