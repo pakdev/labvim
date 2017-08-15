@@ -24,7 +24,8 @@ class State(Enum):
     EDITING = 1
     INSERTING = 2
 
-current_state = State.EDITING
+
+CURRENT_STATE = State.EDITING
 
 
 class KeyboardMonitor(object):
@@ -38,7 +39,7 @@ class KeyboardMonitor(object):
     def _on_pressed_keys(self, sender, pressed_keys):
         for pressed_key in pressed_keys:
             for state, actions in self._keymap.items():
-                if state == current_state:
+                if state == CURRENT_STATE:
                     for action, keys in actions.items():
                         if pressed_key[1] in keys:
                             self._callback(action)
@@ -52,10 +53,10 @@ class Main(ScatterLayout):
     keymap = DictProperty(
         {
             State.EDITING: {
-                'left': ['h'],
-                'right': ['l'],
-                'up': ['k'],
-                'down': ['j'],
+                'left': ['h', 'left'],
+                'right': ['l', 'right'],
+                'up': ['k', 'up'],
+                'down': ['j', 'down'],
                 'insert': ['i'],
                 'quit': ['ZZ']
             },
@@ -201,9 +202,9 @@ class Drawer(GridLayout):
         self._keyboard_monitor = KeyboardMonitor(main, self._on_action)
 
     def _on_action(self, action):
-        global current_state
+        global CURRENT_STATE
         if action == 'insert':
-            current_state = State.INSERTING
+            CURRENT_STATE = State.INSERTING
 
             # Add blocks to drop
             self.add_widget(DrawerOption(name='Math', source='../images/math.png'))
@@ -211,7 +212,7 @@ class Drawer(GridLayout):
 
             self.is_visible = True
         elif action == 'select':
-            current_state = State.EDITING
+            CURRENT_STATE = State.EDITING
 
             self.clear_widgets()
             self.is_visible = False
@@ -227,7 +228,7 @@ class DrawerOption(AnchorLayout):
         self.image_source = kwargs.get('source', '')
 
 
-class LabVIMApp(App):
+class PygApp(App):
     def build(self):
         main = Main()
         atexit.register(main.cleanup)
@@ -235,4 +236,4 @@ class LabVIMApp(App):
 
 
 if __name__ == '__main__':
-    LabVIMApp().run()
+    PygApp().run()
