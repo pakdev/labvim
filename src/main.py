@@ -9,6 +9,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.core.window import Window
 from kivy.uix.widget import Widget
 from kivy.properties import BoundedNumericProperty
+from kivy.properties import ReferenceListProperty
 from kivy.properties import NumericProperty
 from kivy.properties import BooleanProperty
 from kivy.properties import ObjectProperty
@@ -48,7 +49,7 @@ class KeyboardMonitor(object):
         self._keymap = new_keymap
 
 
-class Main(ScatterLayout):
+class Main(FloatLayout):
     pressed_keys = ListProperty([])
     keymap = DictProperty(
         {
@@ -58,6 +59,7 @@ class Main(ScatterLayout):
                 'up': ['k', 'up'],
                 'down': ['j', 'down'],
                 'insert': ['i'],
+                'home': ['gg'],
                 'quit': ['ZZ']
             },
             State.INSERTING: {
@@ -95,11 +97,11 @@ class Main(ScatterLayout):
         return True
 
     def _on_key_up(self, keyboard, keycode):
-        self.pressed_keys.remove(keycode)
+        self.pressed_keys = list(filter(lambda x: x != keycode, self.pressed_keys))
         return True
 
 
-class Grid(FloatLayout):
+class Grid(ScatterLayout):
     rows = NumericProperty(0)
     cols = NumericProperty(0)
 
@@ -112,8 +114,8 @@ class Grid(FloatLayout):
         available_height = Window.height
         available_width = Window.width
 
-        self.rows = math.floor(available_height / self.cell_height)
-        self.cols = math.floor(available_width / self.cell_width)
+        self.rows = int(math.floor(available_height / self.cell_height))
+        self.cols = int(math.floor(available_width / self.cell_width))
 
         for i in range(self.rows + 1):
             y = i * self.cell_height
@@ -128,7 +130,7 @@ class Grid(FloatLayout):
 
 class GridLine(Widget):
     def __init__(self, x1, y1, x2, y2, **kwargs):
-        super(GridLine, self).__init__(**kwargs)
+        super(GridLine, self).__init__()
 
         with self.canvas:
             Color(0.5, 0.5, 0.5, 1)
@@ -137,14 +139,22 @@ class GridLine(Widget):
 
 class Cursor(Widget):
     main = ObjectProperty(None)
+
     color = ListProperty([1, 1, 0, 0.7])
+
     is_active = BooleanProperty(True)
     is_visible = BooleanProperty(True)
-    cursor_width = NumericProperty(100)
-    cursor_height = NumericProperty(100)
-    position_x = NumericProperty(0)
-    position_y = NumericProperty(0)
+
     thickness = BoundedNumericProperty(2, min=1, max=5)
+    grid_pos_x = NumericProperty(0)
+    grid_pos_y = NumericProperty(0)
+    grid_pos_min_x = NumericProperty(None)
+    grid_pos_max_x = NumericProperty(None)
+    grid_pos_min_y = NumericProperty(None)
+    grid_pos_max_y = NumericProperty(None)
+
+    grid_pos = ReferenceListProperty(grid_pos_x, grid_pos_y)
+    grid_pos_bounds = ReferenceListProperty(grid_pos_min_x, grid_pos_max_x, grid_pos_min_y, grid_pos_max_y)
 
     def __init__(self, **kwargs):
         super(Cursor, self).__init__()
@@ -159,32 +169,32 @@ class Cursor(Widget):
     def on_is_visible(self, sender, value):
         self._draw()
 
-    def on_position_x(self, sender, value):
-        self._draw()
-
-    def on_position_y(self, sender, value):
+    def on_grid_pos(self, sender, value):
         self._draw()
 
     def _on_action(self, action):
         if self.is_active:
-            if action == 'left':
-                self.position_x -= 1
-            if action == 'right':
-                self.position_x += 1
-            if action == 'up':
-                self.position_y += 1
-            if action == 'down':
-                self.position_y -= 1
+            if action == 'left' and (self.grid_pos_min_x is None or self.grid_pos_x > self.grid_pos_min_x):
+                self.grid_pos_x -= 1
+            if action == 'right' and (self.grid_pos_max_x is None or self.grid_pos_x < self.grid_pos_max_x):
+                self.grid_pos_x += 1
+            if action == 'up' and (self.grid_pos_max_x is None or self.grid_pos_y < self.grid_pos_max_y):
+                self.grid_pos_y += 1
+            if action == 'down' and (self.grid_pos_min_y is None or self.grid_pos_y > self.grid_pos_min_y):
+                self.grid_pos_y -= 1
+            if action == 'home':
+                self.grid_pos_x = 0
+                self.grid_pos_y = 0
 
     def _draw(self):
         if self.is_visible:
             self.canvas.clear()
             with self.canvas:
                 Color(*self.color)
-                Line(rectangle=(self.position_x * self.cursor_width,
-                                self.position_y * self.cursor_height,
-                                self.cursor_width,
-                                self.cursor_height),
+                Line(rectangle=(self.grid_pos_x * self.width,
+                                self.grid_pos_y * self.height,
+                                self.width,
+                                self.height),
                      width=self.thickness)
         else:
             self.canvas.clear()
@@ -196,7 +206,12 @@ class Drawer(GridLayout):
 
     def __init__(self, **kwargs):
         super(Drawer, self).__init__()
+
         self._keyboard_monitor = None
+        self._options = [
+            DrawerOption(name='Math', source='../images/math.png'),
+            DrawerOption(name='Science', source='../images/science.png')
+        ]
 
     def on_main(self, sender, main):
         self._keyboard_monitor = KeyboardMonitor(main, self._on_action)
@@ -205,16 +220,12 @@ class Drawer(GridLayout):
         global CURRENT_STATE
         if action == 'insert':
             CURRENT_STATE = State.INSERTING
-
-            # Add blocks to drop
-            self.add_widget(DrawerOption(name='Math', source='../images/math.png'))
-            self.add_widget(DrawerOption(name='Science', source='../images/science.png'))
-
+            [self.add_widget(option) for option in self._options]
             self.is_visible = True
+
         elif action == 'select':
             CURRENT_STATE = State.EDITING
-
-            self.clear_widgets()
+            [self.remove_widget(option) for option in self._options]
             self.is_visible = False
 
 
@@ -230,7 +241,7 @@ class DrawerOption(AnchorLayout):
 
 class PygApp(App):
     def build(self):
-        main = Main()
+        main = Main(rows=2, cols=1)
         atexit.register(main.cleanup)
         return main
 

@@ -9,9 +9,9 @@
             color: (1, 1, 0, 0.7)
             is_active: not drawer.is_visible
             is_visible: True
-            cursor_width: grid.cell_width
-            cursor_height: grid.cell_height
-            position_y: grid.rows - 1
+            size: (grid.cell_width, grid.cell_height)
+            size_hint: (None, None)
+            grid_pos: (0, grid.rows - 1)
             thickness: 2
         Drawer:
             id: drawer
@@ -34,10 +34,9 @@
                 color: (1, 0, 0, 0.7)
                 is_active: drawer.is_visible
                 is_visible: drawer.is_visible
-                cursor_width: grid.cell_width
-                cursor_height: grid.cell_height
-                position_x: 0
-                position_y: grid.rows / 2 - 1
+                size: (grid.cell_width, grid.cell_height)
+                grid_pos: (0, grid.rows / 2 - 1)
+                grid_pos_bounds: (0, grid.cols - 1, 0, grid.rows / 2 - 1)
                 thickness: 2
 
 <DrawerOption>:
@@ -51,5 +50,8 @@
         Label:
             text: option.name
 
-
+<StatusBar@BoxLayout>:
+    orientation: 'horizontal'
+    Label:
+        text: '0, 0'
 
