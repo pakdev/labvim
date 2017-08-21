@@ -1,2 +1,5 @@
 # PyCharm project files
 .idea/
+
+# VSCode project files
+.vscode/
