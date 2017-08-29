@@ -239,7 +239,7 @@ class DrawerOption(AnchorLayout):
         self.image_source = kwargs.get('source', '')
 
 
-class PygApp(App):
+class VipyrApp(App):
     def build(self):
         main = Main(rows=2, cols=1)
         atexit.register(main.cleanup)
@@ -247,4 +247,4 @@ class PygApp(App):
 
 
 if __name__ == '__main__':
-    PygApp().run()
+    VipyrApp().run()
